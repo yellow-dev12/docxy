@@ -31,9 +31,10 @@ use_imgs = True #Использовать фотографии?
 img_per_paragraph = 2 #Количество фоток на каждые ? параграфов (поставь ноль чтобы было рандомно)
 docs_type = "docx" #Тип документа на выходе: docx для винды, odt для линукса
 file_name = False #Называть документы именем человека или же просто цифрой
-repeat_blocks_delete = True #Защита от повторений блоков
+repeat_blocks_delete = True #Защита от повторений блоков (возможны баги)
 pics = 16 #Своё число фоток (если нужно фоток под минимум то вписать None)
 rand_name = True # Рандомное имя если код не может найти нужное
+rand_settings = True #Рандомные настройки при создании остальных документов
 
 #Настройки главного документа
 blocks_count = 7 #Количество блоков
@@ -52,13 +53,6 @@ soup = BeautifulSoup(requests.get("https://ru.wikipedia.org/wiki/" + find_text).
 for i in range(len(soup.find_all("p"))): all_blocks.append(Block(soup.find_all("p")[i].text, i))
 print("Всего блоков найдено " + str(len(all_blocks)))
 print("------------>")
-
-#if min_max_blocks_count.split(", ")[1] > blocks_count:
-#    if len(all_blocks) < min_max_blocks_count[1]:
-#        print("Количество найденных блоков меньше чем нужно было найти, повторять данные блоки или создать со столькми блоками сколько удалось найти? (1, 0) по умолчанию=1")
-#        inp = input(":")
-#        if inp == "0":
-#            min_max_blocks_count[1] = len(all_blocks)
 
 #Фотки
 if use_imgs:
@@ -107,7 +101,6 @@ for block in range(blocks_count):
     elif block == 1: temp_block = all_blocks[1]
     print("Кол-во слов: " + str(len(temp_block.text.split(" "))))
     print(temp_block.title)
-    if linux: head = first_doc.add_paragraph(temp_block.title)
     else: head = first_doc.add_heading(temp_block.title, level=2)
     head.alignment = int(main_style.split(", ")[1])
     head.italic = bool(main_style.split(",")[0])
@@ -123,16 +116,18 @@ for block in range(blocks_count):
     print("--------------------------")
 print("Сохранение")
 first_doc.save(f"main.{docs_type}")
-if linux:
-    if input("Распечатать?") == "y": os.system(f"hp-print main.{docs_type}")
 
 #Другие документы
 if docs_count > 1:
     for i in range(docs_count - 1):
         print(f"Создание {i} документа...")
         #Рандомные настройки
-        rand_style = [randint(0, 1), randint(0, 2)]
-        rand_blocks_count = randint(int(min_max_blocks_count.split(", ")[0]), int(min_max_blocks_count.split(", ")[1]))
+        if rand_settings:
+            rand_style = [randint(0, 1), randint(0, 2)]
+            rand_blocks_count = randint(int(min_max_blocks_count.split(", ")[0]), int(min_max_blocks_count.split(", ")[1]))
+        else:
+            rand_style = main_style
+            rand_blocks_count = blocks_count
         try:
             doc_name = names[i]
         except:
@@ -153,7 +148,6 @@ if docs_count > 1:
             if block == 0: temp_block = all_blocks[0]
             elif block == 1: temp_block = all_blocks[1]
             print("Кол-во слов: " + str(len(temp_block.text.split(" "))))
-            if linux: head = first_doc.add_paragraph(temp_block.title)
             else: head = first_doc.add_heading(temp_block.title, level=2)
             head.alignment = rand_style[1]
             head.italic = bool(rand_style[0])
@@ -170,9 +164,5 @@ if docs_count > 1:
         print("Сохранение")
         if file_name:
             first_doc.save(f"{names[i + 1]}.{docs_type}")
-            if linux:
-                if input("Распечатать? ") == "y": os.system(f"{names[i + 1]}.{docs_type}")
         else:
             first_doc.save(f"{i + 1}.{docs_type}")
-            if linux:
-                if input("Распечатать? ") == "y": os.system(f"{i + 1}.{docs_type}")
