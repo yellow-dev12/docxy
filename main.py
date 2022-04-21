@@ -22,23 +22,32 @@ class Block:
 
 
 #Настройки
-find_text = "США" #Тема доклада
-names = "Радион Агумава, Дима Иванов, Богдан, Артём, Рамин, Адам, Данил Григорчук, Даниил Цветиков".split(", ") #Имена для кого делается доклад (через запятую)
-docs_count = 8 #Количество докладов
+
+#True - да
+#False - нет
+
+
+find_text = "Евразия" #Тема доклада
+theme = "" #тема для поиска в блоках, остальные отсекаются (оставить пустым если не нужно)
+names = "Человек один, Человек два".split(", ") #Имена для кого делается доклад (через запятую)
+docs_count = 2 #Количество докладов
 min_max_blocks_count = "5, 8" #минимальное и максимальное количество блоков для докладов (через запятую)
 min_block_size = 25 #Минимальное количество слов в одном блоке
+use_without_random = [True, False] #Использовать блоки по порядку (первый главный документ, второй остальные)
 use_imgs = True #Использовать фотографии?
 img_per_paragraph = 2 #Количество фоток на каждые ? параграфов (поставь ноль чтобы было рандомно)
 docs_type = "docx" #Тип документа на выходе: docx для винды, odt для линукса
-file_name = False #Называть документы именем человека или же просто цифрой
-repeat_blocks_delete = True #Защита от повторений блоков (возможны баги)
+file_name = True #Называть документы именем человека или же просто цифрой
+repeat_blocks_delete = False #Защита от повторений блоков (возможны баги)
 pics = 16 #Своё число фоток (если нужно фоток под минимум то вписать None)
-rand_name = True # Рандомное имя если код не может найти нужное
+rand_name = False # Рандомное имя если код не может найти нужное
 rand_settings = True #Рандомные настройки при создании остальных документов
+add_page_breaks = False
+use_first_not_rand = 2
 
 #Настройки главного документа
 blocks_count = 7 #Количество блоков
-main_style = "1, 1" #Стиль: курсив или нет (0, 1); Положение (0 - лево, 1 - центр, 2 - право)
+main_style = "0, 0" #Стиль: курсив или нет (0, 1); Положение (0 - лево, 1 - центр, 2 - право)
 
 
 
@@ -50,7 +59,14 @@ os.chdir(find_text)
 print("Чтение с сайта")
 all_blocks = []
 soup = BeautifulSoup(requests.get("https://ru.wikipedia.org/wiki/" + find_text).text, "lxml")
-for i in range(len(soup.find_all("p"))): all_blocks.append(Block(soup.find_all("p")[i].text, i))
+for i in range(len(soup.find_all("p"))):
+    if theme != "":
+        if theme in soup.find_all("p")[i].text:
+            all_blocks.append(Block(soup.find_all("p")[i].text, i))
+        else:
+            print(f"Блок {i} был отсечён")
+    else:
+        all_blocks.append(Block(soup.find_all("p")[i].text, i))
 print("Всего блоков найдено " + str(len(all_blocks)))
 print("------------>")
 
@@ -82,12 +98,21 @@ print("Создание первого документа...")
 first_doc = Document()
 first_doc.add_heading(find_text).alignment = 1
 first_doc.add_heading(names[0], level=2).alignment = 1
-first_doc.add_page_break()
+if add_page_breaks: first_doc.add_page_break()
 last_pic = None
 temp_blocks = []
 for block in range(blocks_count):
     print("Блок номер " + str(block))
-    temp_block = all_blocks[randint(0, len(all_blocks) - 1)]
+    if use_without_random[1]:
+        temp_block = all_blocks[block]
+    else:
+        if use_first_not_rand != 0:
+            if block >= use_first_not_rand:
+                temp_block = all_blocks[block]
+            else:
+                temp_block = all_blocks[randint(0, len(all_blocks) - 1)]
+        else:
+            temp_block = all_blocks[randint(0, len(all_blocks) - 1)]
 
     if repeat_blocks_delete:
         if temp_block in temp_blocks: break
@@ -140,10 +165,20 @@ if docs_count > 1:
         first_doc = Document()
         first_doc.add_heading(find_text).alignment = 1
         first_doc.add_heading(names[i], level=2).alignment = 1
-        first_doc.add_page_break()
+        if add_page_breaks: first_doc.add_page_break()
         for block in range(rand_blocks_count):
             print("Блок номер " + str(block))
-            temp_block = all_blocks[randint(0, len(all_blocks) - 1)]
+            if use_without_random[0]:
+                temp_block = all_blocks[block]
+            else:
+                if use_first_not_rand != 0:
+                    if block >= use_first_not_rand:
+                        temp_block = all_blocks[block]
+                    else:
+                        temp_block = all_blocks[randint(0, len(all_blocks) - 1)]
+                else:
+                    temp_block = all_blocks[randint(0, len(all_blocks) - 1)]
+            
             while len(temp_block.text.split(" ")) < min_block_size: temp_block = all_blocks[randint(0, len(all_blocks) - 1)]
             if block == 0: temp_block = all_blocks[0]
             elif block == 1: temp_block = all_blocks[1]
@@ -166,3 +201,4 @@ if docs_count > 1:
             first_doc.save(f"{names[i + 1]}.{docs_type}")
         else:
             first_doc.save(f"{i + 1}.{docs_type}")
+
